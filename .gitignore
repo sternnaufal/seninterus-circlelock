@@ -1,15 +1,30 @@
-# Project-wide Git ignore rules
+# Android Studio / IntelliJ IDEA
+.idea/
 *.iml
-.gradle
+*.ipr
+*.iws
+.gradle/
+build/
+captures/
 local.properties
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
 
-# IDE files
-.idea/
+# Android Build Artifacts
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+
+# Log files
+*.log
 
 # Memory dumps
 *.hprof
+
+# User-specific / Local configurations
+.externalNativeBuild/
+.cxx/
+capture/
+memory_roller.xml
