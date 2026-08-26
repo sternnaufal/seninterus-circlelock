@@ -1,6 +1,6 @@
 package com.senintrerus.circlelock.ui.screens
 
-import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,9 +18,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.senintrerus.circlelock.engine.CircleLockGameEngine
 import com.senintrerus.circlelock.engine.LevelGenerator
 import com.senintrerus.circlelock.model.GameMode
@@ -59,16 +56,8 @@ fun GameScreen(
     var score by remember(level, mode) { mutableIntStateOf(0) }
     var switchTargetId by remember(level, mode) { mutableIntStateOf(0) }
 
-    // Immersive mode — hide system bars during gameplay
-    DisposableEffect(Unit) {
-        val activity = context as? Activity ?: return@DisposableEffect onDispose {}
-        val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
-        controller.hide(WindowInsetsCompat.Type.systemBars())
-        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        onDispose {
-            controller.show(WindowInsetsCompat.Type.systemBars())
-        }
-    }
+    // Back button → navigate back, not close app
+    BackHandler { onBack() }
 
     if (mode == GameMode.SWITCH && !isWin && !isGameOver) {
         LaunchedEffect(circles.size, isWin, isGameOver) {
@@ -123,6 +112,7 @@ fun GameScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {

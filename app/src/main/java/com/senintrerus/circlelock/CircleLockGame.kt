@@ -2,6 +2,7 @@ package com.senintrerus.circlelock
 
 import android.app.Activity
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -12,6 +13,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.senintrerus.circlelock.model.GameMode
 import com.senintrerus.circlelock.model.Screen
 import com.senintrerus.circlelock.ui.screens.*
@@ -32,6 +36,31 @@ fun CircleLockApp() {
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Main) }
     val activity = context as? Activity
+
+    // Immersive mode — hide system bars only during gameplay
+    val isGameScreen = currentScreen is Screen.Game
+    LaunchedEffect(isGameScreen) {
+        val act = activity ?: return@LaunchedEffect
+        val controller = WindowInsetsControllerCompat(act.window, act.window.decorView)
+        if (isGameScreen) {
+            WindowCompat.setDecorFitsSystemWindows(act.window, false)
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+            WindowCompat.setDecorFitsSystemWindows(act.window, true)
+        }
+    }
+
+    // System back button → navigate back or minimize
+    BackHandler {
+        when (currentScreen) {
+            is Screen.Main -> activity?.moveTaskToBack(true)
+            is Screen.Game -> currentScreen = Screen.LevelSelect((currentScreen as Screen.Game).mode)
+            is Screen.LevelSelect -> currentScreen = Screen.ModeSelect
+            else -> currentScreen = Screen.Main
+        }
+    }
 
     // Save/restore last selected mode
     var lastMode by remember {
