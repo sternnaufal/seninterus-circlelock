@@ -1,5 +1,6 @@
 package com.senintrerus.circlelock.ui.screens
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,68 +18,119 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.senintrerus.circlelock.engine.CircleLockGameEngine
 import com.senintrerus.circlelock.engine.LevelGenerator
 import com.senintrerus.circlelock.model.GameMode
+import com.senintrerus.circlelock.model.SkinType
 import com.senintrerus.circlelock.ui.components.GameStatusDialog
+import com.senintrerus.circlelock.ui.components.WinAnimation
 import com.senintrerus.circlelock.ui.theme.BackgroundDark
 import com.senintrerus.circlelock.ui.theme.ErrorRed
 import com.senintrerus.circlelock.ui.theme.PrimaryGold
-import com.senintrerus.circlelock.util.vibrateDevice
+import com.senintrerus.circlelock.util.AudioManager
 import com.senintrerus.circlelock.util.PlayerStats
+import com.senintrerus.circlelock.util.QuestManager
+import com.senintrerus.circlelock.util.vibrateDevice
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
-    level: Int, 
+    level: Int,
     mode: GameMode,
     unlockedLevel: Int,
     onLevelCleared: (Int) -> Unit,
     onNextLevel: () -> Unit,
     onBack: () -> Unit
 ) {
-    var circles by remember(level, mode) {
-        mutableStateOf(LevelGenerator.generateLevelCircles(level, mode))
-    }
-    var isWin by remember { mutableStateOf(false) }
-    var timeLeft by remember { mutableIntStateOf(30) }
-    var isGameOver by remember { mutableStateOf(false) }
-    
     val context = LocalContext.current
+    val activeSkinName = remember { PlayerStats.getActiveSkin(context) }
+    val activeSkin = remember(activeSkinName) { SkinType.valueOf(activeSkinName) }
 
-    if (mode == GameMode.TIME_ATTACK && !isWin && !isGameOver) {
-        LaunchedEffect(Unit) {
-            while (timeLeft > 0) {
+    var circles by remember(level, mode, activeSkin) {
+        mutableStateOf(LevelGenerator.generateLevelCircles(level, mode, activeSkin))
+    }
+    var isWin by remember(level, mode) { mutableStateOf(false) }
+    var isGameOver by remember(level, mode) { mutableStateOf(false) }
+    var timeLeft by remember(level, mode) { mutableIntStateOf(if (mode == GameMode.ENDLESS) 60 else 30) }
+    var score by remember(level, mode) { mutableIntStateOf(0) }
+    var switchTargetId by remember(level, mode) { mutableIntStateOf(0) }
+
+    // Immersive mode — hide system bars during gameplay
+    DisposableEffect(Unit) {
+        val activity = context as? Activity ?: return@DisposableEffect onDispose {}
+        val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        onDispose {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
+    if (mode == GameMode.SWITCH && !isWin && !isGameOver) {
+        LaunchedEffect(circles.size, isWin, isGameOver) {
+            while (circles.isNotEmpty() && !isWin && !isGameOver) {
+                delay(4000)
+                switchTargetId = (switchTargetId + 1) % circles.size
+            }
+        }
+    }
+
+    if ((mode == GameMode.TIME_ATTACK || mode == GameMode.ENDLESS) && !isWin && !isGameOver) {
+        LaunchedEffect(timeLeft, isWin, isGameOver, mode) {
+            while (timeLeft > 0 && !isWin && !isGameOver) {
                 delay(1000)
                 timeLeft--
             }
-            isGameOver = true
+            if (!isWin && timeLeft <= 0) {
+                isGameOver = true
+            }
         }
     }
-    
+
     LaunchedEffect(circles) {
-        val win = circles.all { 
+        if (circles.isEmpty()) return@LaunchedEffect
+
+        val win = circles.all {
             val normalized = (it.currentAngle % 360 + 360) % 360
             normalized < 5f || normalized > 355f
         }
         if (win && !isWin && !isGameOver) {
-            isWin = true
-            onLevelCleared(level)
-            vibrateDevice(context)
-            PlayerStats.incrementClearedCount(context)
+            if (mode == GameMode.ENDLESS) {
+                score++
+                timeLeft += 5
+                vibrateDevice(context)
+                AudioManager.playSound(context, "snap")
+                delay(500)
+                circles = LevelGenerator.generateLevelCircles(level + (score / 2), mode, activeSkin)
+                switchTargetId = 0
+            } else {
+                isWin = true
+                onLevelCleared(level)
+                vibrateDevice(context)
+                AudioManager.playSound(context, "win")
+                PlayerStats.incrementClearedCount(context)
+
+                QuestManager.updateProgress(context, "Locks")
+                if (mode == GameMode.CHAOS) QuestManager.updateProgress(context, "Chaos")
+                if (mode == GameMode.TIME_ATTACK) QuestManager.updateProgress(context, "Time Attack")
+            }
+            QuestManager.updateProgress(context, "Play")
         }
     }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { 
+                title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("LEVEL $level", fontWeight = FontWeight.Black, fontSize = 20.sp)
-                        if (mode == GameMode.TIME_ATTACK) {
+                        Text(if (mode == GameMode.ENDLESS) "SCORE: $score" else "LEVEL $level", fontWeight = FontWeight.Black, fontSize = 20.sp)
+                        if (mode == GameMode.TIME_ATTACK || mode == GameMode.ENDLESS) {
                             Text(
-                                "00:${timeLeft.toString().padStart(2, '0')}", 
+                                "00:${timeLeft.toString().padStart(2, '0')}",
                                 color = if (timeLeft < 10) ErrorRed else PrimaryGold,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
@@ -94,11 +146,13 @@ fun GameScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { 
-                        circles = LevelGenerator.generateLevelCircles(level, mode)
-                        timeLeft = 30
+                    IconButton(onClick = {
+                        circles = LevelGenerator.generateLevelCircles(level, mode, activeSkin)
+                        isWin = false
                         isGameOver = false
-                        isWin = false 
+                        timeLeft = if (mode == GameMode.ENDLESS) 60 else 30
+                        score = 0
+                        switchTargetId = 0
                     }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Restart")
                     }
@@ -112,20 +166,36 @@ fun GameScreen(
             CircleLockGameEngine(
                 circles = circles,
                 onCirclesChanged = { circles = it },
+                onGameOver = {
+                    isGameOver = true
+                    AudioManager.playSound(context, "error")
+                },
                 isWin = isWin || isGameOver,
-                gameMode = mode
+                gameMode = mode,
+                switchTargetId = switchTargetId
             )
-            
+
+            WinAnimation(isVisible = isWin)
+
             AnimatedVisibility(visible = isWin, enter = fadeIn() + scaleIn(), exit = fadeOut()) {
                 GameStatusDialog("SUCCESS!", PrimaryGold, onBack, onNextLevel)
             }
-            
+
             AnimatedVisibility(visible = isGameOver, enter = fadeIn() + scaleIn(), exit = fadeOut()) {
-                GameStatusDialog("GAME OVER", ErrorRed, onBack, { 
-                    isGameOver = false
-                    timeLeft = 30
-                    circles = LevelGenerator.generateLevelCircles(level, mode)
-                }, "RETRY")
+                GameStatusDialog(
+                    if (mode == GameMode.ENDLESS) "FINAL SCORE: $score" else "GAME OVER",
+                    ErrorRed,
+                    onBack,
+                    {
+                        circles = LevelGenerator.generateLevelCircles(level, mode, activeSkin)
+                        isWin = false
+                        isGameOver = false
+                        timeLeft = if (mode == GameMode.ENDLESS) 60 else 30
+                        score = 0
+                        switchTargetId = 0
+                    },
+                    "RETRY"
+                )
             }
         }
     }

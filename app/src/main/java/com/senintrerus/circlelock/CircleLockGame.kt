@@ -33,6 +33,12 @@ fun CircleLockApp() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Main) }
     val activity = context as? Activity
 
+    // Save/restore last selected mode
+    var lastMode by remember {
+        val saved = sharedPrefs.getString("last_mode", null)
+        mutableStateOf(saved?.let { runCatching { GameMode.valueOf(it) }.getOrNull() } ?: GameMode.STANDARD)
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = BackgroundDark
@@ -47,12 +53,29 @@ fun CircleLockApp() {
             when (screen) {
                 is Screen.Main -> MainScreen(
                     onPlayClick = { currentScreen = Screen.ModeSelect },
+                    onSkinsClick = { currentScreen = Screen.Skins },
+                    onTutorialClick = { currentScreen = Screen.Tutorial },
+                    onQuestsClick = { currentScreen = Screen.Quests },
                     onOptionsClick = { currentScreen = Screen.Options },
                     onCreditsClick = { currentScreen = Screen.Credits },
-                    onExitClick = { activity?.finish() }
+                    onExitClick = { activity?.moveTaskToBack(true) }
+                )
+                is Screen.Skins -> SkinsScreen(
+                    onBack = { currentScreen = Screen.Main }
+                )
+                is Screen.Tutorial -> TutorialScreen(
+                    onBack = { currentScreen = Screen.Main }
+                )
+                is Screen.Quests -> QuestsScreen(
+                    onBack = { currentScreen = Screen.Main }
                 )
                 is Screen.ModeSelect -> ModeSelectScreen(
-                    onModeSelected = { currentScreen = Screen.LevelSelect(it) },
+                    initialMode = lastMode,
+                    onModeSelected = { mode ->
+                        lastMode = mode
+                        sharedPrefs.edit().putString("last_mode", mode.name).apply()
+                        currentScreen = Screen.LevelSelect(mode)
+                    },
                     onBack = { currentScreen = Screen.Main }
                 )
                 is Screen.LevelSelect -> LevelSelectScreen(

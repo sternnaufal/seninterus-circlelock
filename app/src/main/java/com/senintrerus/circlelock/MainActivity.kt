@@ -9,10 +9,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.senintrerus.circlelock.ui.theme.BackgroundDark
+import com.senintrerus.circlelock.util.AudioManager
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AudioManager.init(this)
         setContent {
             MaterialTheme {
                 Surface(
@@ -23,5 +25,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        AudioManager.release()
     }
 }

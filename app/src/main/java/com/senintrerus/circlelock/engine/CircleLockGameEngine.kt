@@ -1,5 +1,6 @@
 package com.senintrerus.circlelock.engine
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -16,23 +17,43 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.senintrerus.circlelock.model.CircleData
 import com.senintrerus.circlelock.model.GameMode
 import com.senintrerus.circlelock.ui.theme.PrimaryGold
 import com.senintrerus.circlelock.ui.theme.SuccessGreen
+import com.senintrerus.circlelock.util.AudioManager
+import com.senintrerus.circlelock.util.vibrateDevice
+import kotlinx.coroutines.delay
 import kotlin.math.atan2
 import kotlin.math.sqrt
+
+private const val GHOST_FLICKER_LABEL = "ghostFlicker"
 
 @Composable
 fun CircleLockGameEngine(
     circles: List<CircleData>,
     onCirclesChanged: (List<CircleData>) -> Unit,
+    onGameOver: () -> Unit = {},
     isWin: Boolean,
-    gameMode: GameMode = GameMode.STANDARD
+    gameMode: GameMode = GameMode.STANDARD,
+    switchTargetId: Int = 0
 ) {
+    val context = LocalContext.current
     var activeCircleId by remember { mutableStateOf<Int?>(null) }
     var touchPosition by remember { mutableStateOf<Offset?>(null) }
+    
+    val ghostInfiniteTransition = rememberInfiniteTransition(label = GHOST_FLICKER_LABEL)
+    val ghostAlpha by ghostInfiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.45f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ghostAlpha"
+    )
     
     val currentCircles by rememberUpdatedState(circles)
     val currentOnCirclesChanged by rememberUpdatedState(onCirclesChanged)
@@ -52,7 +73,7 @@ fun CircleLockGameEngine(
         Canvas(
             modifier = Modifier
                 .size(350.dp)
-                .pointerInput(isWin) {
+                .pointerInput(isWin, switchTargetId) {
                     if (isWin) return@pointerInput
                     awaitPointerEventScope {
                         while (true) {
@@ -69,8 +90,31 @@ fun CircleLockGameEngine(
                             
                             val threshold = 35.dp.toPx()
                             if (closest != null && kotlin.math.abs(dist - closest.radius.dp.toPx() * 1.1f) < threshold) {
+                                // Spiky Ring — cannot be touched, ignore input
+                                if (closest.isSpiky) {
+                                    vibrateDevice(context)
+                                    AudioManager.playSound(context, "error")
+                                    continue
+                                }
+
+                                // Locked Ring Check
+                                if (closest.lockedByCircleId != null) {
+                                    val keyRing = currentCircles.find { it.id == closest.lockedByCircleId }
+                                    if (keyRing != null) {
+                                        val norm = (keyRing.currentAngle % 360 + 360) % 360
+                                        val isKeyAligned = norm < 8f || norm > 352f
+                                        if (!isKeyAligned) continue
+                                    }
+                                }
+
+                                // Restriction for SWITCH mode
+                                if (gameMode == GameMode.SWITCH && closest.id != switchTargetId) {
+                                    continue
+                                }
+
                                 activeCircleId = closest.id
                                 touchPosition = startPos
+                                AudioManager.playSound(context, "click")
                                 
                                 var currentAngle = Math.toDegrees(atan2(startPos.y - centerY, startPos.x - centerX).toDouble()).toFloat()
                                 
@@ -103,6 +147,16 @@ fun CircleLockGameEngine(
                                     }
                                 } while (moveEvent.changes.any { it.pressed })
                                 
+                                val snapOccurred = currentCircles.any {
+                                    val normalized = (it.currentAngle % 360 + 360) % 360
+                                    normalized < 8f || normalized > 352f
+                                }
+                                
+                                if (snapOccurred) {
+                                    vibrateDevice(context)
+                                    AudioManager.playSound(context, "snap")
+                                }
+
                                 currentOnCirclesChanged(currentCircles.map {
                                     val normalized = (it.currentAngle % 360 + 360) % 360
                                     if (normalized < 8f || normalized > 352f) it.copy(currentAngle = 0f) else it
@@ -128,14 +182,23 @@ fun CircleLockGameEngine(
                 val normalizedAngle = (circle.currentAngle % 360 + 360) % 360
                 val isAligned = normalizedAngle < 8f || normalizedAngle > 352f
                 val isActive = circle.id == activeCircleId
+                val isSwitchTarget = gameMode == GameMode.SWITCH && circle.id == switchTargetId
                 
                 val color = when {
                     isAligned -> SuccessGreen
                     isActive -> PrimaryGold
+                    isSwitchTarget -> PrimaryGold.copy(alpha = 0.8f)
+                    circle.isSpiky -> Color.Red
+                    circle.isGhost -> circle.color.copy(alpha = ghostAlpha)
+                    circle.lockedByCircleId != null -> {
+                        val keyRing = currentCircles.find { it.id == circle.lockedByCircleId }
+                        val norm = (keyRing?.currentAngle?.let { (it % 360 + 360) % 360 } ?: 0f)
+                        if (norm < 8f || norm > 352f) circle.color.copy(alpha = 0.3f) else Color.Gray.copy(alpha = 0.1f)
+                    }
                     else -> circle.color.copy(alpha = 0.3f)
                 }
                 
-                val strokeWidth = if (isActive) 22.dp.toPx() else 18.dp.toPx()
+                val strokeWidth = if (isActive || isSwitchTarget) 22.dp.toPx() else 18.dp.toPx()
                 val radiusPx = circle.radius.dp.toPx() * 1.1f
 
                 if (isAligned) {
@@ -150,12 +213,22 @@ fun CircleLockGameEngine(
                     )
                 }
 
+                val ringStrokeStyle = if (circle.isGhost) {
+                    Stroke(
+                        width = strokeWidth,
+                        cap = StrokeCap.Round,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 15f), 0f)
+                    )
+                } else {
+                    Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                }
+
                 drawArc(
                     color = color,
                     startAngle = circle.currentAngle + (circle.gapWidth / 2f),
                     sweepAngle = 360f - circle.gapWidth,
                     useCenter = false,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                    style = ringStrokeStyle,
                     size = Size(radiusPx * 2, radiusPx * 2),
                     topLeft = Offset(center.x - radiusPx, center.y - radiusPx)
                 )

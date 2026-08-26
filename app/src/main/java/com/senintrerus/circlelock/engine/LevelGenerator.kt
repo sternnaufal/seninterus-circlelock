@@ -3,11 +3,12 @@ package com.senintrerus.circlelock.engine
 import androidx.compose.ui.graphics.Color
 import com.senintrerus.circlelock.model.CircleData
 import com.senintrerus.circlelock.model.GameMode
+import com.senintrerus.circlelock.model.SkinType
 import com.senintrerus.circlelock.ui.theme.PrimaryGold
 import kotlin.random.Random
 
 object LevelGenerator {
-    fun generateLevelCircles(level: Int, mode: GameMode = GameMode.STANDARD): List<CircleData> {
+    fun generateLevelCircles(level: Int, mode: GameMode = GameMode.STANDARD, skin: SkinType = SkinType.DEFAULT): List<CircleData> {
         val count = when {
             level <= 3 -> 2
             level <= 8 -> 3
@@ -15,13 +16,7 @@ object LevelGenerator {
             else -> 5
         }
         
-        val colors = listOf(
-            Color(0xFFCD7F32), // Bronze
-            Color(0xFFC0C0C0), // Silver
-            PrimaryGold,       // Gold
-            Color(0xFFE5E4E2), // Platinum
-            Color(0xFFB4CFEC)  // Diamond
-        )
+        val skinColors = skin.colors
         
         return List(count) { i ->
             val linkedId = if (mode == GameMode.LINKED && count > 1) {
@@ -32,10 +27,13 @@ object LevelGenerator {
                 id = i,
                 radius = 40f + (i * 30f),
                 currentAngle = Random.nextInt(45, 315).toFloat(),
-                color = colors.getOrElse(i) { Color.Cyan },
+                color = skinColors.getOrElse(i % skinColors.size) { PrimaryGold },
                 rotationSpeed = (1f - (level * 0.015f)).coerceAtLeast(0.4f),
                 linkedCircleId = linkedId,
-                linkRatio = if (Random.nextBoolean()) 0.5f else -0.5f
+                linkRatio = if (Random.nextBoolean()) 0.5f else -0.5f,
+                isSpiky = mode == GameMode.CHAOS && Random.nextFloat() < 0.3f,
+                lockedByCircleId = if (mode == GameMode.CHAOS && i > 0 && Random.nextFloat() < 0.4f) i - 1 else null,
+                isGhost = mode == GameMode.CHAOS && Random.nextFloat() < 0.2f
             )
         }
     }

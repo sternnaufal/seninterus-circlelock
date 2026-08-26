@@ -1,21 +1,34 @@
 package com.senintrerus.circlelock.ui.screens
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,11 +44,17 @@ fun lerp(start: Float, stop: Float, fraction: Float): Float {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ModeSelectScreen(
+    initialMode: GameMode = GameMode.STANDARD,
     onModeSelected: (GameMode) -> Unit,
     onBack: () -> Unit
 ) {
     val modes = GameMode.entries.toTypedArray()
-    val pagerState = rememberPagerState(pageCount = { modes.size })
+    val initialPage = modes.indexOf(initialMode).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { modes.size })
+
+    LaunchedEffect(Unit) {
+        pagerState.animateScrollToPage(initialPage)
+    }
 
     Scaffold(
         topBar = {
@@ -64,9 +83,11 @@ fun ModeSelectScreen(
         ) {
             HorizontalPager(
                 state = pagerState,
-                contentPadding = PaddingValues(horizontal = 32.dp),
+                contentPadding = PaddingValues(horizontal = 40.dp),
                 pageSpacing = 16.dp,
-                modifier = Modifier.fillMaxWidth().height(400.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(380.dp)
             ) { page ->
                 val mode = modes[page]
                 ModeCard(
@@ -79,37 +100,36 @@ fun ModeSelectScreen(
                                         .currentPageOffsetFraction
                                     ).absoluteValue
                             alpha = lerp(
-                                start = 0.5f,
+                                start = 0.4f,
                                 stop = 1f,
                                 fraction = 1f - pageOffset.coerceIn(0f, 1f)
                             )
                             scaleY = lerp(
-                                start = 0.85f,
+                                start = 0.82f,
                                 stop = 1f,
                                 fraction = 1f - pageOffset.coerceIn(0f, 1f)
                             )
                         }
                 )
             }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Pager Indicators
+
+            Spacer(modifier = Modifier.height(28.dp))
+
             Row(
                 Modifier
-                    .height(8.dp)
+                    .height(6.dp)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
                 repeat(modes.size) { iteration ->
                     val isSelected = pagerState.currentPage == iteration
-                    val color = if (isSelected) PrimaryGold else Color.Gray.copy(alpha = 0.3f)
+                    val color = if (isSelected) PrimaryGold else Color.Gray.copy(alpha = 0.2f)
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .padding(horizontal = 3.dp)
+                            .clip(RoundedCornerShape(3.dp))
                             .background(color)
-                            .size(if (isSelected) 24.dp else 8.dp, 8.dp)
+                            .size(if (isSelected) 20.dp else 6.dp, 6.dp)
                     )
                 }
             }
@@ -123,80 +143,107 @@ fun ModeCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val icon = when (mode) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "modePress"
+    )
+
+    val icon: ImageVector = when (mode) {
         GameMode.STANDARD -> Icons.Default.Lock
         GameMode.DARK -> Icons.Default.Star
         GameMode.TIME_ATTACK -> Icons.Default.Refresh
         GameMode.LINKED -> Icons.Default.Share
+        GameMode.SWITCH -> Icons.Default.Notifications
+        GameMode.CHAOS -> Icons.Default.Warning
+        GameMode.ENDLESS -> Icons.Default.PlayArrow
     }
 
-    val cardColor = when (mode) {
-        GameMode.LINKED -> PrimaryGold
-        else -> SurfaceDark
-    }
-    
-    val contentColor = when (mode) {
-        GameMode.LINKED -> BackgroundDark
-        else -> Color.White
+    val (cardGradient, contentColor) = when (mode) {
+        GameMode.STANDARD -> Brush.verticalGradient(listOf(SurfaceLight, SurfaceDark)) to Color.White
+        GameMode.DARK -> Brush.verticalGradient(listOf(Color(0xFF1A1A2E), Color(0xFF0F0F1A))) to Color.White
+        GameMode.TIME_ATTACK -> Brush.verticalGradient(listOf(Color(0xFFCF6679), Color(0xFF8B3A4A))) to Color.White
+        GameMode.LINKED -> Brush.verticalGradient(listOf(PrimaryGold, SecondaryGold)) to BackgroundDark
+        GameMode.SWITCH -> Brush.verticalGradient(listOf(AccentBlue, Color(0xFF1565C0))) to Color.White
+        GameMode.CHAOS -> Brush.verticalGradient(listOf(ErrorRed, Color(0xFFB71C1C))) to Color.White
+        GameMode.ENDLESS -> Brush.verticalGradient(listOf(SuccessGreen, Color(0xFF2E7D32))) to Color.White
     }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(320.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            .height(340.dp)
+            .scale(pressScale)
+            .clickable(interactionSource = interactionSource, indication = null) { onClick() },
+        shape = RoundedCornerShape(28.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .background(cardGradient)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = if (mode == GameMode.LINKED) BackgroundDark else PrimaryGold
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Text(
-                text = mode.getDisplayName(),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-                color = contentColor,
-                letterSpacing = 1.sp
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = mode.description,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = contentColor.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                lineHeight = 20.sp
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Surface(
-                color = if (mode == GameMode.LINKED) BackgroundDark else SuccessGreen,
-                shape = RoundedCornerShape(12.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(contentColor.copy(alpha = 0.15f))
+                        .border(2.dp, contentColor.copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        tint = contentColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 Text(
-                    text = "PLAY NOW",
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    text = mode.getDisplayName(),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    color = contentColor,
+                    letterSpacing = 1.sp
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = mode.description,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = contentColor.copy(alpha = 0.65f),
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Surface(
+                    color = contentColor.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(
+                        text = "PLAY NOW",
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 10.dp),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        color = contentColor,
+                        letterSpacing = 2.sp
+                    )
+                }
             }
         }
     }
