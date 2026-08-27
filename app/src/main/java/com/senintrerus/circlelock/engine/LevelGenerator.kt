@@ -30,10 +30,7 @@ object LevelGenerator {
                 color = skinColors.getOrElse(i % skinColors.size) { PrimaryGold },
                 rotationSpeed = (1f - (level * 0.015f)).coerceAtLeast(0.4f),
                 linkedCircleId = linkedId,
-                linkRatio = if (Random.nextBoolean()) 0.5f else -0.5f,
-                isSpiky = mode == GameMode.CHAOS && Random.nextFloat() < 0.3f,
-                lockedByCircleId = if (mode == GameMode.CHAOS && i > 0 && Random.nextFloat() < 0.4f) i - 1 else null,
-                isGhost = mode == GameMode.CHAOS && Random.nextFloat() < 0.2f
+                linkRatio = if (Random.nextBoolean()) 0.5f else -0.5f
             )
         }
     }

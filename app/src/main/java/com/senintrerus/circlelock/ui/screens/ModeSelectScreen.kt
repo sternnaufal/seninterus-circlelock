@@ -157,7 +157,6 @@ fun ModeCard(
         GameMode.TIME_ATTACK -> Icons.Default.Refresh
         GameMode.LINKED -> Icons.Default.Share
         GameMode.SWITCH -> Icons.Default.Notifications
-        GameMode.CHAOS -> Icons.Default.Warning
         GameMode.ENDLESS -> Icons.Default.PlayArrow
     }
 
@@ -167,7 +166,6 @@ fun ModeCard(
         GameMode.TIME_ATTACK -> Brush.verticalGradient(listOf(Color(0xFFCF6679), Color(0xFF8B3A4A))) to Color.White
         GameMode.LINKED -> Brush.verticalGradient(listOf(PrimaryGold, SecondaryGold)) to BackgroundDark
         GameMode.SWITCH -> Brush.verticalGradient(listOf(AccentBlue, Color(0xFF1565C0))) to Color.White
-        GameMode.CHAOS -> Brush.verticalGradient(listOf(ErrorRed, Color(0xFFB71C1C))) to Color.White
         GameMode.ENDLESS -> Brush.verticalGradient(listOf(SuccessGreen, Color(0xFF2E7D32))) to Color.White
     }
 

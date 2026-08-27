@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.senintrerus.circlelock.engine.CircleLockGameEngine
 import com.senintrerus.circlelock.engine.LevelGenerator
+import com.senintrerus.circlelock.model.AnimationType
 import com.senintrerus.circlelock.model.GameMode
 import com.senintrerus.circlelock.model.SkinType
 import com.senintrerus.circlelock.ui.components.GameStatusDialog
@@ -30,6 +31,8 @@ import com.senintrerus.circlelock.ui.theme.PrimaryGold
 import com.senintrerus.circlelock.util.AudioManager
 import com.senintrerus.circlelock.util.PlayerStats
 import com.senintrerus.circlelock.util.QuestManager
+import com.senintrerus.circlelock.util.ShareManager
+import com.senintrerus.circlelock.util.EventManager
 import com.senintrerus.circlelock.util.vibrateDevice
 import kotlinx.coroutines.delay
 
@@ -38,7 +41,6 @@ import kotlinx.coroutines.delay
 fun GameScreen(
     level: Int,
     mode: GameMode,
-    unlockedLevel: Int,
     onLevelCleared: (Int) -> Unit,
     onNextLevel: () -> Unit,
     onBack: () -> Unit
@@ -46,6 +48,9 @@ fun GameScreen(
     val context = LocalContext.current
     val activeSkinName = remember { PlayerStats.getActiveSkin(context) }
     val activeSkin = remember(activeSkinName) { SkinType.valueOf(activeSkinName) }
+    val activeAnimName = remember { PlayerStats.getActiveAnim(context) }
+    val activeAnim = remember(activeAnimName) { runCatching { AnimationType.valueOf(activeAnimName) }.getOrDefault(AnimationType.CLASSIC) }
+    val totalCleared = remember { PlayerStats.getTotalClearedCount(context) }
 
     var circles by remember(level, mode, activeSkin) {
         mutableStateOf(LevelGenerator.generateLevelCircles(level, mode, activeSkin))
@@ -90,9 +95,13 @@ fun GameScreen(
         if (win && !isWin && !isGameOver) {
             if (mode == GameMode.ENDLESS) {
                 score++
-                timeLeft += 5
+                timeLeft += 2
                 vibrateDevice(context)
                 AudioManager.playSound(context, "snap")
+                PlayerStats.incrementClearedCount(context)
+                PlayerStats.addCurrency(context, 2)
+                QuestManager.updateProgress(context, "Locks")
+                EventManager.updateProgress(context, mode, score)
                 delay(500)
                 circles = LevelGenerator.generateLevelCircles(level + (score / 2), mode, activeSkin)
                 switchTargetId = 0
@@ -102,9 +111,10 @@ fun GameScreen(
                 vibrateDevice(context)
                 AudioManager.playSound(context, "win")
                 PlayerStats.incrementClearedCount(context)
+                val currencyReward = if (mode == GameMode.TIME_ATTACK) 3 else 2
+                PlayerStats.addCurrency(context, currencyReward)
 
                 QuestManager.updateProgress(context, "Locks")
-                if (mode == GameMode.CHAOS) QuestManager.updateProgress(context, "Chaos")
                 if (mode == GameMode.TIME_ATTACK) QuestManager.updateProgress(context, "Time Attack")
             }
             QuestManager.updateProgress(context, "Play")
@@ -165,10 +175,18 @@ fun GameScreen(
                 switchTargetId = switchTargetId
             )
 
-            WinAnimation(isVisible = isWin)
+            WinAnimation(isVisible = isWin, style = activeAnim, skinColors = activeSkin.colors)
 
             AnimatedVisibility(visible = isWin, enter = fadeIn() + scaleIn(), exit = fadeOut()) {
-                GameStatusDialog("SUCCESS!", PrimaryGold, onBack, onNextLevel)
+                GameStatusDialog(
+                    "SUCCESS!",
+                    PrimaryGold,
+                    onBack,
+                    onNextLevel,
+                    onShare = {
+                        ShareManager.shareWinResult(context, level, mode, totalCleared)
+                    }
+                )
             }
 
             AnimatedVisibility(visible = isGameOver, enter = fadeIn() + scaleIn(), exit = fadeOut()) {

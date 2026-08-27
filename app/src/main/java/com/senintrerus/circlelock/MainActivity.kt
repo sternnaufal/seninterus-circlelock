@@ -8,15 +8,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.senintrerus.circlelock.ui.theme.BackgroundDark
 import com.senintrerus.circlelock.util.AudioManager
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var insetsController: WindowInsetsControllerCompat
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Edge-to-edge setup
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+        // Initialize insets controller
+        insetsController = WindowInsetsControllerCompat(window, window.decorView)
+
+        hideSystemBars()
+
         AudioManager.init(this)
         setContent {
             MaterialTheme {
@@ -24,10 +39,16 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = BackgroundDark
                 ) {
-                    CircleLockApp()
+                CircleLockApp()
                 }
             }
         }
+    }
+
+    private fun hideSystemBars() {
+        insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        insetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 
     override fun onDestroy() {

@@ -10,7 +10,7 @@ object QuestManager {
     
     private val ALL_QUESTS = listOf(
         DailyQuest("1", "Open 10 Locks", 10, 0),
-        DailyQuest("2", "Win 3 Chaos Games", 3, 0),
+        DailyQuest("2", "Win 2 Switch Games", 2, 0),
         DailyQuest("3", "Open 20 Locks", 20, 0),
         DailyQuest("4", "Play 5 Games", 5, 0),
         DailyQuest("5", "Win 2 Time Attack Games", 2, 0)

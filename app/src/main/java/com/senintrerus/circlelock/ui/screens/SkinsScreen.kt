@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.senintrerus.circlelock.model.AnimationType
 import com.senintrerus.circlelock.model.SkinType
 import com.senintrerus.circlelock.ui.theme.*
 import com.senintrerus.circlelock.util.PlayerStats
@@ -35,81 +36,165 @@ import com.senintrerus.circlelock.util.PlayerStats
 fun SkinsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val totalCleared = remember { PlayerStats.getTotalClearedCount(context) }
+    var currency by remember { mutableIntStateOf(PlayerStats.getCurrency(context)) }
     var activeSkin by remember { mutableStateOf(PlayerStats.getActiveSkin(context)) }
+    var activeAnim by remember { mutableStateOf(PlayerStats.getActiveAnim(context)) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("SKIN SHOP", fontWeight = FontWeight.Black, letterSpacing = 2.sp) },
+                title = { Text("SHOP", fontWeight = FontWeight.Black, letterSpacing = 2.sp) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") } },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent, titleContentColor = Color.White, navigationIconContentColor = Color.White)
             )
         },
         containerColor = BackgroundDark
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+            // Currency + Stats
             Surface(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 color = SurfaceDark,
                 shape = RoundedCornerShape(18.dp),
                 border = BorderStroke(1.dp, PrimaryGold.copy(alpha = 0.12f))
             ) {
                 Row(
-                    modifier = Modifier.padding(18.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("LOCKS OPENED", color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, textAlign = TextAlign.Center)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("$totalCleared", color = PrimaryGold, fontSize = 28.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                        Text("LOCKS OPENED", color = TextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text("$totalCleared", color = PrimaryGold, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     }
-                    Surface(
-                        color = PrimaryGold.copy(alpha = 0.08f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            "USE LOCKS TO\nUNLOCK SKINS",
-                            color = PrimaryGold.copy(alpha = 0.5f),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                        )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("BALANCE", color = TextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text("$currency", color = SuccessGreen, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
+            // Tabs
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = SurfaceDark,
+                contentColor = PrimaryGold,
+                divider = {}
             ) {
-                items(SkinType.entries) { skin ->
-                    SkinItem(
-                        skin = skin,
-                        isActive = activeSkin == skin.name,
-                        isUnlocked = PlayerStats.isSkinUnlocked(context, skin.name),
-                        canAfford = totalCleared >= skin.cost,
-                        onSelect = {
-                            PlayerStats.setActiveSkin(context, skin.name)
-                            activeSkin = skin.name
-                        },
-                        onUnlock = {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("SKINS", fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("ANIMATIONS", fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Content
+            when (selectedTab) {
+                0 -> SkinsGrid(
+                    currency = currency,
+                    activeSkin = activeSkin,
+                    onSelectSkin = {
+                        PlayerStats.setActiveSkin(context, it)
+                        activeSkin = it
+                    },
+                    onUnlockSkin = { skin ->
+                        if (PlayerStats.spendCurrency(context, skin.cost)) {
+                            currency = PlayerStats.getCurrency(context)
                             PlayerStats.unlockSkin(context, skin.name)
                             PlayerStats.setActiveSkin(context, skin.name)
                             activeSkin = skin.name
                         }
-                    )
-                }
+                    }
+                )
+                1 -> AnimationsGrid(
+                    currency = currency,
+                    activeAnim = activeAnim,
+                    onSelectAnim = {
+                        PlayerStats.setActiveAnim(context, it)
+                        activeAnim = it
+                    },
+                    onUnlockAnim = { anim ->
+                        if (PlayerStats.spendCurrency(context, anim.cost)) {
+                            currency = PlayerStats.getCurrency(context)
+                            PlayerStats.unlockAnim(context, anim.name)
+                            PlayerStats.setActiveAnim(context, anim.name)
+                            activeAnim = anim.name
+                        }
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun SkinItem(
+private fun SkinsGrid(
+    currency: Int,
+    activeSkin: String,
+    onSelectSkin: (String) -> Unit,
+    onUnlockSkin: (SkinType) -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(SkinType.entries) { skin ->
+            SkinItem(
+                skin = skin,
+                isActive = activeSkin == skin.name,
+                isUnlocked = PlayerStats.isSkinUnlocked(
+                    androidx.compose.ui.platform.LocalContext.current,
+                    skin.name
+                ),
+                canAfford = currency >= skin.cost,
+                onSelect = { onSelectSkin(skin.name) },
+                onUnlock = { onUnlockSkin(skin) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AnimationsGrid(
+    currency: Int,
+    activeAnim: String,
+    onSelectAnim: (String) -> Unit,
+    onUnlockAnim: (AnimationType) -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(AnimationType.entries) { anim ->
+            AnimationItem(
+                anim = anim,
+                isActive = activeAnim == anim.name,
+                isUnlocked = PlayerStats.isAnimUnlocked(
+                    androidx.compose.ui.platform.LocalContext.current,
+                    anim.name
+                ),
+                canAfford = currency >= anim.cost,
+                onSelect = { onSelectAnim(anim.name) },
+                onUnlock = { onUnlockAnim(anim) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SkinItem(
     skin: SkinType,
     isActive: Boolean,
     isUnlocked: Boolean,
@@ -125,55 +210,141 @@ fun SkinItem(
 
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(SurfaceDark)
-            .border(1.5.dp, borderColor, RoundedCornerShape(20.dp))
+            .border(1.5.dp, borderColor, RoundedCornerShape(16.dp))
             .clickable(enabled = isUnlocked || canAfford) {
                 if (isUnlocked) onSelect() else onUnlock()
             }
-            .padding(16.dp),
+            .padding(14.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(50.dp)
                 .clip(CircleShape)
                 .background(Brush.sweepGradient(skin.colors))
                 .border(3.dp, Color.Black.copy(alpha = 0.3f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             if (!isUnlocked) {
-                Icon(Icons.Default.Lock, contentDescription = "Locked", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Lock, contentDescription = "Locked", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
             } else if (isActive) {
-                Icon(Icons.Default.Check, contentDescription = "Active", tint = Color.White, modifier = Modifier.size(22.dp))
+                Icon(Icons.Default.Check, contentDescription = "Active", tint = Color.White, modifier = Modifier.size(20.dp))
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        Text(skin.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 0.5.sp, textAlign = TextAlign.Center)
+        Text(skin.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 9.sp, letterSpacing = 0.5.sp, textAlign = TextAlign.Center)
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         if (isUnlocked) {
             Surface(
                 color = if (isActive) SuccessGreen.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(6.dp)
             ) {
                 Text(
                     if (isActive) "ACTIVE" else "SELECT",
                     color = if (isActive) SuccessGreen else TextSecondary,
-                    fontSize = 9.sp,
+                    fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                 )
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${skin.cost}", color = if (canAfford) PrimaryGold else TextDim, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("LOCKS", color = TextDim, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text("${skin.cost}", color = if (canAfford) PrimaryGold else TextDim, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                Spacer(modifier = Modifier.width(3.dp))
+                Text("LOCKS", color = TextDim, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnimationItem(
+    anim: AnimationType,
+    isActive: Boolean,
+    isUnlocked: Boolean,
+    canAfford: Boolean,
+    onSelect: () -> Unit,
+    onUnlock: () -> Unit
+) {
+    val borderColor = when {
+        isActive -> SuccessGreen
+        isUnlocked -> AccentPurple.copy(alpha = 0.3f)
+        else -> Color.White.copy(alpha = 0.06f)
+    }
+
+    val icon = when (anim) {
+        AnimationType.CLASSIC -> "\uD83C\uDF86"
+        AnimationType.CONFETTI -> "\uD83C\uDF8A"
+        AnimationType.SPARKLE -> "\u2728"
+        AnimationType.SHOCKWAVE -> "\uD83D\uDCA5"
+        AnimationType.FIRE -> "\uD83D\uDD25"
+        AnimationType.SNOWFLAKE -> "\u2744\uFE0F"
+        AnimationType.GALAXY -> "\uD83C\uDF0C"
+        AnimationType.MATRIX -> "\uD83D\uDCDD"
+    }
+
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceDark)
+            .border(1.5.dp, borderColor, RoundedCornerShape(16.dp))
+            .clickable(enabled = isUnlocked || canAfford) {
+                if (isUnlocked) onSelect() else onUnlock()
+            }
+            .padding(14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+                .background(AccentPurple.copy(alpha = 0.1f))
+                .border(2.dp, borderColor, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!isUnlocked) {
+                Icon(Icons.Default.Lock, contentDescription = "Locked", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+            } else {
+                Text(icon, fontSize = 24.sp)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(anim.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 9.sp, letterSpacing = 0.5.sp, textAlign = TextAlign.Center)
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        Text(anim.description, color = TextDim, fontSize = 7.sp, textAlign = TextAlign.Center, maxLines = 1)
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        if (isUnlocked) {
+            Surface(
+                color = if (isActive) SuccessGreen.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Text(
+                    if (isActive) "ACTIVE" else "SELECT",
+                    color = if (isActive) SuccessGreen else TextSecondary,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                )
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${anim.cost}", color = if (canAfford) AccentPurple else TextDim, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                Spacer(modifier = Modifier.width(3.dp))
+                Text("LOCKS", color = TextDim, fontSize = 7.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

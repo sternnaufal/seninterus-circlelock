@@ -152,7 +152,8 @@ fun GameStatusDialog(
     titleColor: Color,
     onBack: () -> Unit,
     onAction: () -> Unit,
-    actionText: String = "NEXT LEVEL"
+    actionText: String = "NEXT LEVEL",
+    onShare: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -183,33 +184,65 @@ fun GameStatusDialog(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+            if (onShare != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("MENU", fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+                    OutlinedButton(
+                        onClick = onShare,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    ) {
+                        Text("SHARE", fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+                    }
+                    Button(
+                        onClick = onAction,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (titleColor == ErrorRed) ErrorRed else SuccessGreen
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    ) {
+                        Text(actionText, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+                    }
                 }
-                Button(
-                    onClick = onAction,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (titleColor == ErrorRed) ErrorRed else SuccessGreen
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(actionText, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+                    OutlinedButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    ) {
+                        Text("MENU", fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+                    }
+                    Button(
+                        onClick = onAction,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (titleColor == ErrorRed) ErrorRed else SuccessGreen
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    ) {
+                        Text(actionText, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+                    }
                 }
             }
         }

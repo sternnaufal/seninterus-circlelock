@@ -32,6 +32,8 @@ fun MainScreen(
     onSkinsClick: () -> Unit,
     onTutorialClick: () -> Unit,
     onQuestsClick: () -> Unit,
+    onStreakClick: () -> Unit,
+    onEventsClick: () -> Unit,
     onOptionsClick: () -> Unit,
     onCreditsClick: () -> Unit,
     onExitClick: () -> Unit
@@ -173,6 +175,21 @@ fun MainScreen(
                         MenuButton(
                             "QUESTS",
                             onClick = onQuestsClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        MenuButton(
+                            "STREAK",
+                            onClick = onStreakClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MenuButton(
+                            "EVENTS",
+                            onClick = onEventsClick,
                             modifier = Modifier.weight(1f)
                         )
                     }

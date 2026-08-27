@@ -5,7 +5,6 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import com.senintrerus.circlelock.util.SettingsManager
 
 enum class VibrationType {
     CLICK, SUCCESS, ERROR
@@ -57,6 +56,9 @@ object PlayerStats {
     private const val KEY_TOTAL_CLEARED = "total_cleared"
     private const val KEY_ACTIVE_SKIN = "active_skin"
     private const val KEY_UNLOCKED_SKINS = "unlocked_skins"
+    private const val KEY_CURRENCY = "currency"
+    private const val KEY_ACTIVE_ANIM = "active_anim"
+    private const val KEY_UNLOCKED_ANIMS = "unlocked_anims"
 
     fun incrementClearedCount(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -91,5 +93,48 @@ object PlayerStats {
         val unlocked = prefs.getStringSet(KEY_UNLOCKED_SKINS, setOf("DEFAULT"))?.toMutableSet() ?: mutableSetOf("DEFAULT")
         unlocked.add(skinName)
         prefs.edit().putStringSet(KEY_UNLOCKED_SKINS, unlocked).apply()
+    }
+
+    fun getCurrency(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_CURRENCY, 0)
+    }
+
+    fun addCurrency(context: Context, amount: Int) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val current = prefs.getInt(KEY_CURRENCY, 0)
+        prefs.edit().putInt(KEY_CURRENCY, current + amount).apply()
+    }
+
+    fun spendCurrency(context: Context, amount: Int): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val current = prefs.getInt(KEY_CURRENCY, 0)
+        if (current < amount) return false
+        prefs.edit().putInt(KEY_CURRENCY, current - amount).apply()
+        return true
+    }
+
+    fun getActiveAnim(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_ACTIVE_ANIM, "CLASSIC") ?: "CLASSIC"
+    }
+
+    fun setActiveAnim(context: Context, animName: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_ACTIVE_ANIM, animName).apply()
+    }
+
+    fun isAnimUnlocked(context: Context, animName: String): Boolean {
+        if (animName == "CLASSIC") return true
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val unlocked = prefs.getStringSet(KEY_UNLOCKED_ANIMS, setOf("CLASSIC")) ?: setOf("CLASSIC")
+        return unlocked.contains(animName)
+    }
+
+    fun unlockAnim(context: Context, animName: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val unlocked = prefs.getStringSet(KEY_UNLOCKED_ANIMS, setOf("CLASSIC"))?.toMutableSet() ?: mutableSetOf("CLASSIC")
+        unlocked.add(animName)
+        prefs.edit().putStringSet(KEY_UNLOCKED_ANIMS, unlocked).apply()
     }
 }

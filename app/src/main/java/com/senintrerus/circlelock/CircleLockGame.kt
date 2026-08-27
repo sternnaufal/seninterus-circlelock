@@ -13,46 +13,30 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.senintrerus.circlelock.model.GameMode
 import com.senintrerus.circlelock.model.Screen
 import com.senintrerus.circlelock.ui.screens.*
 import com.senintrerus.circlelock.ui.theme.BackgroundDark
+import com.senintrerus.circlelock.util.EventManager
+import com.senintrerus.circlelock.util.StreakManager
 
 @Composable
 fun CircleLockApp() {
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("circle_lock_prefs", Context.MODE_PRIVATE) }
-    // Track unlocked levels for each mode separately
     val unlockedLevels = remember { mutableStateMapOf<GameMode, Int>() }
-    
+
     LaunchedEffect(Unit) {
         GameMode.entries.forEach { mode ->
             unlockedLevels[mode] = sharedPrefs.getInt("unlocked_level_${mode.name}", 1)
         }
+        StreakManager.onAppOpen(context)
+        EventManager.onAppOpen(context)
     }
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Main) }
     val activity = context as? Activity
 
-    // Immersive mode — hide system bars only during gameplay
-    val isGameScreen = currentScreen is Screen.Game
-    LaunchedEffect(isGameScreen) {
-        val act = activity ?: return@LaunchedEffect
-        val controller = WindowInsetsControllerCompat(act.window, act.window.decorView)
-        if (isGameScreen) {
-            WindowCompat.setDecorFitsSystemWindows(act.window, false)
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        } else {
-            controller.show(WindowInsetsCompat.Type.systemBars())
-            WindowCompat.setDecorFitsSystemWindows(act.window, true)
-        }
-    }
-
-    // System back button → navigate back or minimize
     BackHandler {
         when (currentScreen) {
             is Screen.Main -> activity?.moveTaskToBack(true)
@@ -62,7 +46,6 @@ fun CircleLockApp() {
         }
     }
 
-    // Save/restore last selected mode
     var lastMode by remember {
         val saved = sharedPrefs.getString("last_mode", null)
         mutableStateOf(saved?.let { runCatching { GameMode.valueOf(it) }.getOrNull() } ?: GameMode.STANDARD)
@@ -85,6 +68,8 @@ fun CircleLockApp() {
                     onSkinsClick = { currentScreen = Screen.Skins },
                     onTutorialClick = { currentScreen = Screen.Tutorial },
                     onQuestsClick = { currentScreen = Screen.Quests },
+                    onStreakClick = { currentScreen = Screen.Streak },
+                    onEventsClick = { currentScreen = Screen.Events },
                     onOptionsClick = { currentScreen = Screen.Options },
                     onCreditsClick = { currentScreen = Screen.Credits },
                     onExitClick = { activity?.moveTaskToBack(true) }
@@ -96,6 +81,12 @@ fun CircleLockApp() {
                     onBack = { currentScreen = Screen.Main }
                 )
                 is Screen.Quests -> QuestsScreen(
+                    onBack = { currentScreen = Screen.Main }
+                )
+                is Screen.Streak -> StreakScreen(
+                    onBack = { currentScreen = Screen.Main }
+                )
+                is Screen.Events -> EventScreen(
                     onBack = { currentScreen = Screen.Main }
                 )
                 is Screen.ModeSelect -> ModeSelectScreen(
@@ -116,7 +107,6 @@ fun CircleLockApp() {
                 is Screen.Game -> GameScreen(
                     level = screen.level,
                     mode = screen.mode,
-                    unlockedLevel = unlockedLevels[screen.mode] ?: 1,
                     onLevelCleared = { level ->
                         val currentMax = unlockedLevels[screen.mode] ?: 1
                         if (level >= currentMax) {
@@ -124,6 +114,7 @@ fun CircleLockApp() {
                             unlockedLevels[screen.mode] = nextLevel
                             sharedPrefs.edit().putInt("unlocked_level_${screen.mode.name}", nextLevel).apply()
                         }
+                        EventManager.updateProgress(context, screen.mode)
                     },
                     onNextLevel = { currentScreen = Screen.Game(screen.level + 1, screen.mode) },
                     onBack = { currentScreen = Screen.LevelSelect(screen.mode) }
