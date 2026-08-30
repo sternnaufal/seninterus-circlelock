@@ -5,7 +5,7 @@
 -keep class androidx.compose.** { *; }
 
 # Keep data classes used in Compose
--keep class com.senintrerus.circlelock.model.** { *; }
+-keep class com.seninterus.circlelock.model.** { *; }
 
 # Keep enum values
 -keepclassmembers enum * {

@@ -34,6 +34,10 @@
                 android:resource="@xml/file_provider_paths" />
         </provider>
 
+        <receiver
+            android:name=".util.DailyReminderReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>

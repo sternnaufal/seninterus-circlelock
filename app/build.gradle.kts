@@ -1,18 +1,32 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
 }
 
+val releaseProps = Properties().apply {
+    val propsFile = rootProject.file("local.properties")
+    if (propsFile.exists()) {
+        propsFile.inputStream().use { load(it) }
+    }
+}
+
+val releaseStoreFile = releaseProps.getProperty("release.storeFile")
+val releaseStorePassword = releaseProps.getProperty("release.storePassword")
+val releaseKeyAlias = releaseProps.getProperty("release.keyAlias")
+val releaseKeyPassword = releaseProps.getProperty("release.keyPassword")
+
 android {
-    namespace = "com.senintrerus.circlelock"
-    compileSdk = 34
+    namespace = "com.seninterus.circlelock"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.senintrerus.circlelock"
+        applicationId = "com.seninterus.circlelock"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 35
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -24,6 +38,12 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.create("release").apply {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
