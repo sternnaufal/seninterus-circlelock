@@ -3,10 +3,15 @@ package com.seninterus.circlelock.util
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.sin
 
 object ToneGenerator {
     private const val SAMPLE_RATE = 44100
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     fun playTone(frequency: Float, durationMs: Int, volume: Float = 0.3f) {
         try {
@@ -57,13 +62,13 @@ object ToneGenerator {
     }
 
     fun playWin() {
-        Thread {
+        scope.launch {
             playTone(523f, 120, 0.3f)
-            Thread.sleep(130)
+            delay(130)
             playTone(659f, 120, 0.3f)
-            Thread.sleep(130)
+            delay(130)
             playTone(784f, 180, 0.35f)
-        }.start()
+        }
     }
 
     fun playError() {

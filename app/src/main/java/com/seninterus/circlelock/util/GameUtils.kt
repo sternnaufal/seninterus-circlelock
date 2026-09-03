@@ -64,7 +64,7 @@ object PlayerStats {
     fun incrementClearedCount(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val current = prefs.getInt(KEY_TOTAL_CLEARED, 0)
-        prefs.edit().putInt(KEY_TOTAL_CLEARED, current + 1).apply()
+        prefs.edit().putInt(KEY_TOTAL_CLEARED, current + 1).commit()
     }
 
     fun getTotalClearedCount(context: Context): Int {
@@ -93,7 +93,7 @@ object PlayerStats {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val unlocked = prefs.getStringSet(KEY_UNLOCKED_SKINS, setOf("DEFAULT"))?.toMutableSet() ?: mutableSetOf("DEFAULT")
         unlocked.add(skinName)
-        prefs.edit().putStringSet(KEY_UNLOCKED_SKINS, unlocked).apply()
+        prefs.edit().putStringSet(KEY_UNLOCKED_SKINS, unlocked).commit()
     }
 
     fun getCurrency(context: Context): Int {
@@ -104,14 +104,14 @@ object PlayerStats {
     fun addCurrency(context: Context, amount: Int) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val current = prefs.getInt(KEY_CURRENCY, 0)
-        prefs.edit().putInt(KEY_CURRENCY, current + amount).apply()
+        prefs.edit().putInt(KEY_CURRENCY, current + amount).commit()
     }
 
     fun spendCurrency(context: Context, amount: Int): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val current = prefs.getInt(KEY_CURRENCY, 0)
         if (current < amount) return false
-        prefs.edit().putInt(KEY_CURRENCY, current - amount).apply()
+        prefs.edit().putInt(KEY_CURRENCY, current - amount).commit()
         return true
     }
 
@@ -136,7 +136,7 @@ object PlayerStats {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val unlocked = prefs.getStringSet(KEY_UNLOCKED_ANIMS, setOf("CLASSIC"))?.toMutableSet() ?: mutableSetOf("CLASSIC")
         unlocked.add(animName)
-        prefs.edit().putStringSet(KEY_UNLOCKED_ANIMS, unlocked).apply()
+        prefs.edit().putStringSet(KEY_UNLOCKED_ANIMS, unlocked).commit()
     }
 
     fun isTutorialShown(context: Context): Boolean {

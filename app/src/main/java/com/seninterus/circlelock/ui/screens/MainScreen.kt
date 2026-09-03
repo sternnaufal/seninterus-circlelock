@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.seninterus.circlelock.ui.components.MenuButton
+import com.seninterus.circlelock.ui.components.BannerAd
 import com.seninterus.circlelock.ui.theme.*
 import com.seninterus.circlelock.util.PlayerStats
 
@@ -202,5 +203,9 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
         }
+    }
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        BannerAd(modifier = Modifier.padding(bottom = 8.dp))
     }
 }

@@ -14,6 +14,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.seninterus.circlelock.ui.theme.BackgroundDark
 import com.seninterus.circlelock.util.AudioManager
 import com.seninterus.circlelock.util.AppNotificationManager
+import com.google.android.gms.ads.MobileAds
 
 class MainActivity : ComponentActivity() {
 
@@ -36,6 +37,7 @@ class MainActivity : ComponentActivity() {
         AudioManager.init(this)
         AppNotificationManager.createChannel(this)
         AppNotificationManager.scheduleDailyReminder(this)
+        MobileAds.initialize(this) {}
         setContent {
             MaterialTheme {
                 Surface(

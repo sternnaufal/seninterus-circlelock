@@ -27,6 +27,36 @@ import com.seninterus.circlelock.util.SettingsManager
 @Composable
 fun OptionsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("RESET ALL PROGRESS?", fontWeight = FontWeight.Bold) },
+            text = { Text("This action cannot be undone. All your progress, currency, skins, and animations will be permanently deleted.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        context.getSharedPreferences("circle_lock_prefs", Context.MODE_PRIVATE).edit().clear().commit()
+                        context.getSharedPreferences("circle_lock_stats", Context.MODE_PRIVATE).edit().clear().commit()
+                        context.getSharedPreferences("circle_lock_settings", Context.MODE_PRIVATE).edit().clear().commit()
+                        showResetDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
+                ) {
+                    Text("RESET", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("CANCEL")
+                }
+            },
+            containerColor = SurfaceDark,
+            titleContentColor = ErrorRed,
+            textContentColor = Color.White.copy(alpha = 0.8f)
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -50,6 +80,12 @@ fun OptionsScreen(onBack: () -> Unit) {
                 subtitle = "Toggle game sounds",
                 initialValue = SettingsManager.isSoundEnabled(context),
                 onChanged = { SettingsManager.setSoundEnabled(context, it) }
+            )
+            OptionItem(
+                title = "Music",
+                subtitle = "Toggle background music",
+                initialValue = SettingsManager.isMusicEnabled(context),
+                onChanged = { SettingsManager.setMusicEnabled(context, it) }
             )
             OptionItem(
                 title = "Vibration",
@@ -86,11 +122,7 @@ fun OptionsScreen(onBack: () -> Unit) {
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Button(
-                        onClick = {
-                            context.getSharedPreferences("circle_lock_prefs", Context.MODE_PRIVATE).edit().clear().apply()
-                            context.getSharedPreferences("circle_lock_stats", Context.MODE_PRIVATE).edit().clear().apply()
-                            context.getSharedPreferences("circle_lock_settings", Context.MODE_PRIVATE).edit().clear().apply()
-                        },
+                        onClick = { showResetDialog = true },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ErrorRed.copy(alpha = 0.15f), contentColor = ErrorRed),
                         shape = RoundedCornerShape(14.dp)

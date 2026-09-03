@@ -36,6 +36,7 @@ import com.seninterus.circlelock.util.ShareManager
 import com.seninterus.circlelock.util.EventManager
 import com.seninterus.circlelock.util.RatingManager
 import com.seninterus.circlelock.util.vibrateDevice
+import com.seninterus.circlelock.ui.components.InterstitialAdHelper
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +65,11 @@ fun GameScreen(
     var switchTargetId by remember(level, mode) { mutableIntStateOf(0) }
     var showRatingDialog by remember { mutableStateOf(false) }
     val activity = context as? android.app.Activity
+    val interstitialAdHelper = remember { InterstitialAdHelper(context) }
+
+    LaunchedEffect(Unit) {
+        interstitialAdHelper.loadAd()
+    }
 
     // Back button → navigate back, not close app
     BackHandler { onBack() }
@@ -120,6 +126,9 @@ fun GameScreen(
                 RatingManager.onGameFinished(context)
                 if (RatingManager.shouldShowPrompt(context)) {
                     showRatingDialog = true
+                }
+                if (level % 3 == 0 && activity != null) {
+                    interstitialAdHelper.showAdIfAvailable(activity)
                 }
 
                 QuestManager.updateProgress(context, "Locks")

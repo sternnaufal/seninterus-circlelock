@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.seninterus.circlelock.ui.theme.*
 import com.seninterus.circlelock.util.PlayerStats
+import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -42,6 +43,7 @@ fun TutorialScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val pagerState = rememberPagerState(pageCount = { 4 })
     val totalPages = 4
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -94,7 +96,9 @@ fun TutorialScreen(onBack: () -> Unit) {
             Button(
                 onClick = {
                     if (pagerState.currentPage < totalPages - 1) {
-                        // This won't work with HorizontalPager directly, but we use the button as "Next" or "Done"
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                        }
                     } else {
                         PlayerStats.setTutorialShown(context)
                         onBack()
