@@ -39,6 +39,10 @@
             android:name=".util.DailyReminderReceiver"
             android:exported="false" />
 
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-2202683924014269~4027622292" />
+
     </application>
 
 </manifest>
