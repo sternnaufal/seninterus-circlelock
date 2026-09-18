@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Circle Lock Icon 512x512</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #333;
+        }
+        canvas {
+            border: 1px solid #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="icon" width="512" height="512"></canvas>
+    <script>
+        const canvas = document.getElementById('icon');
+        const ctx = canvas.getContext('2d');
+        const size = 512;
+        const center = size / 2;
+
+        // Colors
+        const primaryGold = '#FFD700';
+        const secondaryGold = '#C5A021';
+        const background = '#0A0A0A';
+
+        // Background
+        ctx.fillStyle = background;
+        ctx.fillRect(0, 0, size, size);
+
+        // Draw circle ring function
+        function drawRing(radius, thickness, color, gapAngle = 0) {
+            ctx.beginPath();
+            ctx.arc(center, center, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = thickness;
+            ctx.stroke();
+
+            // Draw gap
+            if (gapAngle > 0) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.beginPath();
+                ctx.arc(center, center, radius, -gapAngle / 2, gapAngle / 2);
+                ctx.strokeStyle = background;
+                ctx.lineWidth = thickness + 4;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // Outer ring
+        drawRing(180, 28, primaryGold, 0.15);
+
+        // Middle ring
+        drawRing(140, 22, secondaryGold, 0.15);
+
+        // Inner ring
+        drawRing(100, 18, primaryGold, 0.15);
+
+        // Lock body
+        ctx.fillStyle = primaryGold;
+        ctx.beginPath();
+        ctx.roundRect(center - 50, center + 10, 100, 70, 12);
+        ctx.fill();
+
+        // Lock shackle
+        ctx.strokeStyle = primaryGold;
+        ctx.lineWidth = 18;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(center, center + 10, 35, Math.PI, 0);
+        ctx.stroke();
+
+        // Keyhole circle
+        ctx.fillStyle = background;
+        ctx.beginPath();
+        ctx.arc(center, center + 35, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Keyhole rectangle
+        ctx.fillStyle = background;
+        ctx.fillRect(center - 5, center + 40, 10, 25);
+
+        // Glow effect
+        const gradient = ctx.createRadialGradient(center, center, 0, center, center, 250);
+        gradient.addColorStop(0, 'rgba(255, 215, 0, 0.15)');
+        gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+    </script>
+</body>
+</html>
